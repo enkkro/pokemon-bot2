@@ -63,7 +63,13 @@ async def check_preorders():
                     unique_key = f"{site['name']}::{text[:100]}"
                     if unique_key not in known_preorders:
                         known_preorders.add(unique_key)
-                        await channel.send(f"📦 **Nouveau produit détecté chez {site['name']}** !\n🔗 {site['url']}")
+                        embed = discord.Embed(
+                            title=f"🛒 Nouveau produit détecté chez {site['name']}",
+                            description=text[:300] + "..." if len(text) > 300 else text,
+                            url=site["url"],
+                            color=discord.Color.green()
+                        )
+                        await channel.send(embed=embed)
 
         except Exception as e:
             print(f"Erreur avec {site['name']} : {e}")
