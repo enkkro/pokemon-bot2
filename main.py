@@ -87,7 +87,8 @@ async def reset(ctx):
 async def status(ctx):
     uptime = datetime.now() - start_time
     minutes, seconds = divmod(uptime.seconds, 60)
-    await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.")
+    await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.
+📦 Produits suivis actuellement : {len(known_status)}")
 
 @bot.event
 async def on_ready():
