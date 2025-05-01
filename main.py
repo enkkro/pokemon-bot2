@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 import requests
 from bs4 import BeautifulSoup
 import os
+import asyncio
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -64,7 +65,7 @@ async def check_sites():
 
         for site in WATCHED_SITES:
             try:
-                response = session.get(site["url"], timeout=10)
+                response = session.get(site["url"], timeout=(5, 10))
                 if response.status_code != 200:
                     log(f"Erreur HTTP {response.status_code} sur {site['name']}")
                     continue
@@ -79,7 +80,7 @@ async def check_sites():
                 for link in product_links:
                     full_url = urljoin(site["url"], link["href"])
                     try:
-                        product_page = session.get(full_url, timeout=10)
+                        product_page = session.get(full_url, timeout=(5, 10))
                         if product_page.status_code == 404:
                             log(f"⛔ Lien brisé détecté (404) : {full_url}")
                             continue
@@ -102,6 +103,8 @@ async def check_sites():
                             if status == "stock":
                                 if channel:
                                     await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
+
+                await asyncio.sleep(1)  # Pause entre les sites
 
             except Exception as e:
                 log(f"Erreur sur {site['name']} : {str(e)}")
