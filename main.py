@@ -55,8 +55,13 @@ async def check_sites():
 
             for link in product_links:
                 full_url = urljoin(site["url"], link["href"])
-                text = link.get_text().lower()
-                status = "stock" if not any(word in text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
+                try:
+                    product_page = requests.get(full_url, timeout=10)
+                    product_soup = BeautifulSoup(product_page.text, "html.parser")
+                    page_text = product_soup.get_text().lower()
+                    status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
+                except:
+                    continue
 
                 if full_url not in known_status:
                     known_status[full_url] = status
@@ -84,10 +89,22 @@ async def reset(ctx):
     await ctx.send("🔄 Mémoire du bot réinitialisée. Tous les produits seront re-scannés.")
 
 @bot.command()
+async def derniers(ctx):
+    if not known_status:
+        await ctx.send("Aucun produit suivi pour l'instant.")
+        return
+    derniers = list(known_status.items())[-10:]
+    message = "
+".join(f"- {url} → {status}" for url, status in derniers)
+    await ctx.send(f"📝 **10 derniers produits suivis :**
+{message}")
+
+@bot.command()
 async def status(ctx):
     uptime = datetime.now() - start_time
     minutes, seconds = divmod(uptime.seconds, 60)
-    await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.\\n📦 Produits suivis actuellement : {len(known_status)}")
+    await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.
+📦 Produits suivis actuellement : {len(known_status)}")
 
 @bot.event
 async def on_ready():
