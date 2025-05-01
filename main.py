@@ -13,6 +13,9 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# Date et heure du démarrage du bot
+start_time = datetime.now()
+
 # Mémoire intelligente : produit -> statut ("stock" ou "rupture")
 known_status = {}
 initialized = False
@@ -40,7 +43,7 @@ WATCHED_SITES = [
     {"name": "Auchan", "url": "https://www.auchan.fr/recherche?text=pokemon+tcg"}
 ]
 
-@tasks.loop(minutes=2)
+@tasks.loop(seconds=30)
 async def check_sites():
     global initialized
     channel = bot.get_channel(CHANNEL_ID)
@@ -74,7 +77,13 @@ async def check_sites():
         print("🔄 Première initialisation terminée : mémoire remplie sans alertes.")
 
 @bot.event
-async def on_ready():
+async @bot.command()
+async def status(ctx):
+    uptime = datetime.now() - start_time
+    minutes, seconds = divmod(uptime.seconds, 60)
+    await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.")
+
+def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
     check_sites.start()
 
