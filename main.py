@@ -15,7 +15,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 known_status = {}
 
 WATCHED_SITES = [
-    {"name": "Tycap TCG", "url": "https://tycap-tcg.com", "selector": "body", "condition": lambda text: any(p in text.lower() for p in ["pokemon", "pokémon"]) and any(k in text.lower() for k in ["booster", "display", "etb", "coffret", "deck"])", "pokémon", "pokémon tcg", "pokemon tcg"]), "stock_check": lambda text: "rupture" not in text.lower()},
+    {"name": "Tycap TCG", "url": "https://tycap-tcg.com", "selector": "body", "condition": lambda text: any(p in text.lower() for p in ["pokemon", "pokémon"]) and any(k in text.lower() for k in ["booster", "display", "etb", "coffret", "deck", "pokémon", "pokémon tcg", "pokemon tcg"]), "stock_check": lambda text: "rupture" not in text.lower()},
     {"name": "Pokemael", "url": "https://pokemael.com", "selector": "body", "condition": lambda text: "pokemon" in text.lower(), "stock_check": lambda text: "rupture" not in text.lower()},
     {"name": "Guizette Family", "url": "https://www.guizettefamily.com", "selector": "body", "condition": lambda text: "pokemon" in text.lower(), "stock_check": lambda text: "rupture" not in text.lower()},
     {"name": "Kairyu", "url": "https://kairyu.fr", "selector": "body", "condition": lambda text: "pokemon" in text.lower(), "stock_check": lambda text: "rupture" not in text.lower()},
@@ -70,7 +70,7 @@ async def check_preorders():
                             embed = discord.Embed(
                                 title=f"🛒 Nouveau produit en STOCK chez {site['name']}",
                                 description=text[:300] + "..." if len(text) > 300 else text,
-                                url=response.url,
+                                url=site["url"],
                                 color=discord.Color.green()
                             )
                             if image_url:
@@ -82,7 +82,7 @@ async def check_preorders():
                             embed = discord.Embed(
                                 title=f"🔁 RESTOCK chez {site['name']} !",
                                 description=text[:300] + "..." if len(text) > 300 else text,
-                                url=response.url,
+                                url=site["url"],
                                 color=discord.Color.orange()
                             )
                             await channel.send(embed=embed)
