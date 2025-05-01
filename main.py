@@ -13,10 +13,14 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Date et heure du démarrage du bot
-start_time = datetime.now()
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; Bot/1.0; +https://example.com/bot)"
+}
 
-# Mémoire intelligente : produit -> statut ("stock" ou "rupture")
+def log(msg):
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+
+start_time = datetime.now()
 known_status = {}
 initialized = False
 
@@ -49,15 +53,17 @@ async def check_sites():
     channel = bot.get_channel(CHANNEL_ID)
     for site in WATCHED_SITES:
         try:
-            response = requests.get(site["url"], timeout=10)
-            soup = BeautifulSoup(response.text, "html.parser")
+            response = requests.get(site["url"], headers=HEADERS, timeout=10)
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}")
+            soup = BeautifulSoup(response.text, "lxml")
             product_links = [a for a in soup.find_all("a", href=True) if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()]
 
             for link in product_links:
                 full_url = urljoin(site["url"], link["href"])
                 try:
-                    product_page = requests.get(full_url, timeout=10)
-                    product_soup = BeautifulSoup(product_page.text, "html.parser")
+                    product_page = requests.get(full_url, headers=HEADERS, timeout=10)
+                    product_soup = BeautifulSoup(product_page.text, "lxml")
                     page_text = product_soup.get_text().lower()
                     status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
                 except:
@@ -75,11 +81,12 @@ async def check_sites():
                             await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
 
         except Exception as e:
+            log(f"Erreur sur {site['name']} : {str(e)}")
             await channel.send(f"⚠️ Erreur sur {site['name']} : {str(e)}")
 
     if not initialized:
         initialized = True
-        print("🔄 Première initialisation terminée : mémoire remplie sans alertes.")
+        log("🔄 Première initialisation terminée : mémoire remplie sans alertes.")
 
 @bot.command()
 async def reset(ctx):
@@ -105,7 +112,7 @@ async def status(ctx):
 
 @bot.event
 async def on_ready():
-    print(f"Bot connecté en tant que {bot.user}")
+    log(f"Bot connecté en tant que {bot.user}")
     check_sites.start()
 
 bot.run(TOKEN)
