@@ -14,8 +14,14 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; Bot/1.0; +https://example.com/bot)"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept-Language": "fr-FR,fr;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Connection": "keep-alive"
 }
+
+session = requests.Session()
+session.headers.update(HEADERS)
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
@@ -53,7 +59,7 @@ async def check_sites():
     channel = bot.get_channel(CHANNEL_ID)
     for site in WATCHED_SITES:
         try:
-            response = requests.get(site["url"], headers=HEADERS, timeout=10)
+            response = session.get(site["url"], timeout=10)
             if response.status_code != 200:
                 log(f"Erreur HTTP {response.status_code} sur {site['name']}")
                 continue
@@ -64,7 +70,7 @@ async def check_sites():
             for link in product_links:
                 full_url = urljoin(site["url"], link["href"])
                 try:
-                    product_page = requests.get(full_url, headers=HEADERS, timeout=10)
+                    product_page = session.get(full_url, timeout=10)
                     product_soup = BeautifulSoup(product_page.text, "html.parser")
                     page_text = product_soup.get_text().lower()
                     status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
