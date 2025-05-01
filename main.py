@@ -53,18 +53,10 @@ WATCHED_SITES = [
     {"name": "Auchan", "url": "https://www.auchan.fr/recherche?text=pokemon+tcg"}
 ]
 
-@tasks.loop(seconds=30)
-async def check_sites():
-    global initialized
-    try:
-        channel = bot.get_channel(CHANNEL_ID)
-        if channel is None:
-            log(f"❌ Salon Discord introuvable pour CHANNEL_ID = {CHANNEL_ID}")
-            return
-
-        for site in WATCHED_SITES:
+        for site in WATCHED_SITES:
             try:
-            response = session.get(site["url"], timeout=10)
+            try:
+                response = session.get(site["url"], timeout=10)
             if response.status_code != 200:
                 log(f"Erreur HTTP {response.status_code} sur {site['name']}")
                 continue
@@ -102,7 +94,7 @@ async def check_sites():
                             await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
 
         except Exception as e:
-            log(f"Erreur sur {site['name']} : {str(e)}")
+                log(f"Erreur sur {site['name']} : {str(e)}")
 
     if not initialized:
         initialized = True
