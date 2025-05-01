@@ -71,11 +71,7 @@ async def check_sites():
                     continue
 
                 soup = BeautifulSoup(response.text, "html.parser")
-                product_links = [
-                    a for a in soup.find_all("a", href=True)
-                    if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()
-                    if not any(x in a["href"] for x in ["login", "account", "cart", "contact"])
-                ]
+                product_links = [a for a in soup.find_all("a", href=True) if not any(x in a["href"] for x in ["login", "account", "cart", "contact"])]
 
                 for link in product_links:
                     full_url = urljoin(site["url"], link["href"])
@@ -86,6 +82,10 @@ async def check_sites():
                             continue
                         product_soup = BeautifulSoup(product_page.text, "html.parser")
                         page_text = product_soup.get_text().lower()
+
+                        if "pokemon" not in page_text:
+                            continue
+
                         status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
                     except Exception as e:
                         log(f"Erreur produit ({full_url}) : {str(e)}")
@@ -104,7 +104,7 @@ async def check_sites():
                                 if channel:
                                     await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
 
-                await asyncio.sleep(1)  # Pause entre les sites
+                await asyncio.sleep(1)
 
             except Exception as e:
                 log(f"Erreur sur {site['name']} : {str(e)}")
