@@ -76,14 +76,14 @@ async def check_sites():
         initialized = True
         print("🔄 Première initialisation terminée : mémoire remplie sans alertes.")
 
-@bot.event
-async @bot.command()
+@bot.command()
 async def status(ctx):
     uptime = datetime.now() - start_time
     minutes, seconds = divmod(uptime.seconds, 60)
     await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.")
 
-def on_ready():
+@bot.event
+async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
     check_sites.start()
 
