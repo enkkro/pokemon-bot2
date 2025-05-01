@@ -53,52 +53,64 @@ WATCHED_SITES = [
     {"name": "Auchan", "url": "https://www.auchan.fr/recherche?text=pokemon+tcg"}
 ]
 
-        for site in WATCHED_SITES:
-            try:
+@tasks.loop(seconds=30)
+async def check_sites():
+    global initialized
+    try:
+        channel = bot.get_channel(CHANNEL_ID)
+        if channel is None:
+            log(f"❌ Salon Discord introuvable pour CHANNEL_ID = {CHANNEL_ID}")
+            return
+
+        for site in WATCHED_SITES:
             try:
                 response = session.get(site["url"], timeout=10)
-            if response.status_code != 200:
-                log(f"Erreur HTTP {response.status_code} sur {site['name']}")
-                continue
-
-            soup = BeautifulSoup(response.text, "html.parser")
-            product_links = [
-                a for a in soup.find_all("a", href=True)
-                if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()
-                if not any(x in a["href"] for x in ["login", "account", "cart", "contact"])
-            ]
-
-            for link in product_links:
-                full_url = urljoin(site["url"], link["href"])
-                try:
-                    product_page = session.get(full_url, timeout=10)
-                    if product_page.status_code == 404:
-                        log(f"⛔ Lien brisé détecté (404) : {full_url}")
-                        continue
-                    product_soup = BeautifulSoup(product_page.text, "html.parser")
-                    page_text = product_soup.get_text().lower()
-                    status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
-                except Exception as e:
-                    log(f"Erreur produit ({full_url}) : {str(e)}")
+                if response.status_code != 200:
+                    log(f"Erreur HTTP {response.status_code} sur {site['name']}")
                     continue
 
-                if full_url not in known_status:
-                    known_status[full_url] = status
-                    if initialized and status == "stock":
-                        if channel: await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
-                else:
-                    last_status = known_status[full_url]
-                    if last_status != status:
-                        known_status[full_url] = status
-                        if status == "stock":
-                            await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
+                soup = BeautifulSoup(response.text, "html.parser")
+                product_links = [
+                    a for a in soup.find_all("a", href=True)
+                    if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()
+                    if not any(x in a["href"] for x in ["login", "account", "cart", "contact"])
+                ]
 
-        except Exception as e:
+                for link in product_links:
+                    full_url = urljoin(site["url"], link["href"])
+                    try:
+                        product_page = session.get(full_url, timeout=10)
+                        if product_page.status_code == 404:
+                            log(f"⛔ Lien brisé détecté (404) : {full_url}")
+                            continue
+                        product_soup = BeautifulSoup(product_page.text, "html.parser")
+                        page_text = product_soup.get_text().lower()
+                        status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
+                    except Exception as e:
+                        log(f"Erreur produit ({full_url}) : {str(e)}")
+                        continue
+
+                    if full_url not in known_status:
+                        known_status[full_url] = status
+                        if initialized and status == "stock":
+                            if channel:
+                                await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
+                    else:
+                        last_status = known_status[full_url]
+                        if last_status != status:
+                            known_status[full_url] = status
+                            if status == "stock":
+                                if channel:
+                                    await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
+
+            except Exception as e:
                 log(f"Erreur sur {site['name']} : {str(e)}")
 
-    if not initialized:
-        initialized = True
-        log("🔄 Première initialisation terminée : mémoire remplie sans alertes.")
+        if not initialized:
+            initialized = True
+            log("🔄 Première initialisation terminée : mémoire remplie sans alertes.")
+    except Exception as e:
+        log(f"❌ Erreur dans check_sites : {str(e)}")
 
 @bot.command()
 async def reset(ctx):
