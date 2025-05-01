@@ -58,9 +58,7 @@ async def check_sites():
             if new_found:
                 for product in new_found:
                     await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{product}")
-            else:
-                now = datetime.now().strftime("%H:%M:%S")
-                print(f"[{now}] Vérifié : {site['name']} — aucun nouveau lien Pokémon.")
+            
 
         except Exception as e:
             await channel.send(f"⚠️ Erreur sur {site['name']} : {str(e)}")
