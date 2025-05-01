@@ -65,12 +65,19 @@ async def check_sites():
                 continue
 
             soup = BeautifulSoup(response.text, "html.parser")
-            product_links = [a for a in soup.find_all("a", href=True) if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()]
+            product_links = [
+                a for a in soup.find_all("a", href=True)
+                if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()
+                if not any(x in a["href"] for x in ["login", "account", "cart", "contact"])
+            ]
 
             for link in product_links:
                 full_url = urljoin(site["url"], link["href"])
                 try:
                     product_page = session.get(full_url, timeout=10)
+                    if product_page.status_code == 404:
+                        log(f"⛔ Lien brisé détecté (404) : {full_url}")
+                        continue
                     product_soup = BeautifulSoup(product_page.text, "html.parser")
                     page_text = product_soup.get_text().lower()
                     status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
