@@ -56,11 +56,13 @@ WATCHED_SITES = [
 @tasks.loop(seconds=30)
 async def check_sites():
     global initialized
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel is None:
-        log(f"❌ Salon Discord introuvable pour CHANNEL_ID = {CHANNEL_ID}")
-        return
-    for site in WATCHED_SITES:
+    try:
+        channel = bot.get_channel(CHANNEL_ID)
+        if channel is None:
+            log(f"❌ Salon Discord introuvable pour CHANNEL_ID = {CHANNEL_ID}")
+            return
+
+        for site in WATCHED_SITES:
         try:
             response = session.get(site["url"], timeout=10)
             if response.status_code != 200:
@@ -91,7 +93,7 @@ async def check_sites():
                 if full_url not in known_status:
                     known_status[full_url] = status
                     if initialized and status == "stock":
-                        await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
+                        if channel: await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
                 else:
                     last_status = known_status[full_url]
                     if last_status != status:
@@ -131,6 +133,9 @@ async def status(ctx):
 @bot.event
 async def on_ready():
     log(f"Bot connecté en tant que {bot.user}")
-    check_sites.start()
+    try:
+        check_sites.start()
+    except Exception as e:
+        log(f"❌ Erreur lors du démarrage de la boucle check_sites : {str(e)}")
 
 bot.run(TOKEN)
