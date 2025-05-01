@@ -57,7 +57,7 @@ async def check_sites():
                 full_url = urljoin(site["url"], link["href"])
                 try:
                     product_page = requests.get(full_url, timeout=10)
-                    product_soup = BeautifulSoup(product_page.text, "html.parser")
+             product_soup = BeautifulSoup(product_page.text, "lxml")
                     page_text = product_soup.get_text().lower()
                     status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
                 except:
