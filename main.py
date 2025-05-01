@@ -63,7 +63,7 @@ async def check_sites():
             return
 
         for site in WATCHED_SITES:
-        try:
+            try:
             response = session.get(site["url"], timeout=10)
             if response.status_code != 200:
                 log(f"Erreur HTTP {response.status_code} sur {site['name']}")
