@@ -74,7 +74,7 @@ async def scan_sites():
                     continue
 
                 soup = BeautifulSoup(response.text, "html.parser")
-                product_links = [a for a in soup.find_all("a", href=True) if not any(x in a["href"] for x in ["login", "account", "cart", "contact"])]
+                product_links = [a for a in soup.find_all("a", href=True) if not any(x in a["href"] for x in ["login", "account", "cart", "contact", "javascript:void"])]
 
                 for link in product_links:
                     full_url = urljoin(site["url"], link["href"])
@@ -89,7 +89,9 @@ async def scan_sites():
                         if "pokemon" not in page_text:
                             continue
 
-                        status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
+                        add_to_cart = product_soup.find("button", string=lambda s: s and "ajouter au panier" in s.lower())
+                        status = "stock" if add_to_cart else "rupture"
+
                     except Exception as e:
                         log(f"Erreur produit ({full_url}) : {str(e)}")
                         continue
@@ -97,15 +99,13 @@ async def scan_sites():
                     if full_url not in known_status:
                         known_status[full_url] = status
                         if initialized and status == "stock":
-                            if channel:
-                                await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
+                            await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
                     else:
                         last_status = known_status[full_url]
                         if last_status != status:
                             known_status[full_url] = status
                             if status == "stock":
-                                if channel:
-                                    await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
+                                await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
 
                 await asyncio.sleep(1)
 
