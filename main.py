@@ -73,7 +73,12 @@ async def scan_sites():
                     log(f"Erreur HTTP {response.status_code} sur {site['name']}")
                     continue
 
-                soup = BeautifulSoup(response.text, "html.parser")
+                try:
+                    soup = BeautifulSoup(response.text, "html.parser")
+                except Exception as e:
+                    log(f"❌ Erreur de parsing HTML pour {site['name']} : {str(e)}")
+                    continue
+
                 product_links = [a for a in soup.find_all("a", href=True) if not any(x in a["href"] for x in ["login", "account", "cart", "contact", "javascript:void"])]
 
                 for link in product_links:
@@ -83,7 +88,12 @@ async def scan_sites():
                         if product_page.status_code == 404:
                             log(f"⛔ Lien brisé détecté (404) : {full_url}")
                             continue
-                        product_soup = BeautifulSoup(product_page.text, "html.parser")
+                        try:
+                            product_soup = BeautifulSoup(product_page.text, "html.parser")
+                        except Exception as e:
+                            log(f"Erreur BeautifulSoup sur {full_url} : {str(e)}")
+                            continue
+
                         page_text = product_soup.get_text().lower()
 
                         if "pokemon" not in page_text:
