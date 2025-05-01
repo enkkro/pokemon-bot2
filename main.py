@@ -77,6 +77,13 @@ async def check_sites():
         print("🔄 Première initialisation terminée : mémoire remplie sans alertes.")
 
 @bot.command()
+async def reset(ctx):
+    global known_status, initialized
+    known_status = {}
+    initialized = False
+    await ctx.send("🔄 Mémoire du bot réinitialisée. Tous les produits seront re-scannés.")
+
+@bot.command()
 async def status(ctx):
     uptime = datetime.now() - start_time
     minutes, seconds = divmod(uptime.seconds, 60)
