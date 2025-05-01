@@ -56,14 +56,14 @@ async def check_sites():
             response = requests.get(site["url"], headers=HEADERS, timeout=10)
             if response.status_code != 200:
                 raise Exception(f"HTTP {response.status_code}")
-            soup = BeautifulSoup(response.text, "lxml")
+            soup = BeautifulSoup(response.text, "html.parser")
             product_links = [a for a in soup.find_all("a", href=True) if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()]
 
             for link in product_links:
                 full_url = urljoin(site["url"], link["href"])
                 try:
                     product_page = requests.get(full_url, headers=HEADERS, timeout=10)
-                    product_soup = BeautifulSoup(product_page.text, "lxml")
+                    product_soup = BeautifulSoup(product_page.text, "html.parser")
                     page_text = product_soup.get_text().lower()
                     status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
                 except:
