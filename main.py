@@ -57,6 +57,9 @@ WATCHED_SITES = [
 async def check_sites():
     global initialized
     channel = bot.get_channel(CHANNEL_ID)
+    if channel is None:
+        log(f"❌ Salon Discord introuvable pour CHANNEL_ID = {CHANNEL_ID}")
+        return
     for site in WATCHED_SITES:
         try:
             response = session.get(site["url"], timeout=10)
