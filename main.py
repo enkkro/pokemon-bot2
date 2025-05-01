@@ -55,7 +55,9 @@ async def check_sites():
         try:
             response = requests.get(site["url"], headers=HEADERS, timeout=10)
             if response.status_code != 200:
-                raise Exception(f"HTTP {response.status_code}")
+                log(f"Erreur HTTP {response.status_code} sur {site['name']}")
+                continue
+
             soup = BeautifulSoup(response.text, "html.parser")
             product_links = [a for a in soup.find_all("a", href=True) if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()]
 
@@ -66,7 +68,8 @@ async def check_sites():
                     product_soup = BeautifulSoup(product_page.text, "html.parser")
                     page_text = product_soup.get_text().lower()
                     status = "stock" if not any(word in page_text for word in ["rupture", "épuisé", "indisponible"]) else "rupture"
-                except:
+                except Exception as e:
+                    log(f"Erreur produit ({full_url}) : {str(e)}")
                     continue
 
                 if full_url not in known_status:
@@ -82,7 +85,6 @@ async def check_sites():
 
         except Exception as e:
             log(f"Erreur sur {site['name']} : {str(e)}")
-            await channel.send(f"⚠️ Erreur sur {site['name']} : {str(e)}")
 
     if not initialized:
         initialized = True
