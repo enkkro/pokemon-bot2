@@ -94,14 +94,14 @@ async def derniers(ctx):
         await ctx.send("Aucun produit suivi pour l'instant.")
         return
     derniers = list(known_status.items())[-10:]
-message = "\\n".join(f"- {url} → {status}" for url, status in derniers)
-await ctx.send(f"📝 **10 derniers produits suivis :**\\n{message}")
+    message = "\n".join(f"- {url} → {status}" for url, status in derniers)
+    await ctx.send(f"📝 **10 derniers produits suivis :**\n{message}")
 
 @bot.command()
 async def status(ctx):
     uptime = datetime.now() - start_time
     minutes, seconds = divmod(uptime.seconds, 60)
-    await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.\\n📦 Produits suivis actuellement : {len(known_status)}")
+    await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.\n📦 Produits suivis actuellement : {len(known_status)}")
 
 @bot.event
 async def on_ready():
