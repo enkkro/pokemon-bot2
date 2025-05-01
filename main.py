@@ -56,6 +56,9 @@ WATCHED_SITES = [
 
 @tasks.loop(seconds=30)
 async def check_sites():
+    await scan_sites()
+
+async def scan_sites():
     global initialized
     try:
         channel = bot.get_channel(CHANNEL_ID)
@@ -136,6 +139,12 @@ async def status(ctx):
     uptime = datetime.now() - start_time
     minutes, seconds = divmod(uptime.seconds, 60)
     await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.\n📦 Produits suivis actuellement : {len(known_status)}")
+
+@bot.command()
+async def rescan(ctx):
+    await ctx.send("🔁 Scan manuel lancé...")
+    await scan_sites()
+    await ctx.send("✅ Scan terminé.")
 
 @bot.event
 async def on_ready():
