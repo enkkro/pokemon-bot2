@@ -102,7 +102,8 @@ async def scan_sites():
                             lambda soup: soup.find("button", string=lambda s: s and ("ajouter au panier" in s.lower() or "précommande" in s.lower())),
                             lambda soup: soup.find("form", {"action": lambda s: s and "/cart/add" in s}),
                             lambda soup: soup.find("button", {"name": "add"}),
-                            lambda soup: soup.select_one("button.add-to-cart, button.product-form__cart-submit")
+                            lambda soup: soup.select_one("button.add-to-cart, button.product-form__cart-submit"),
+                            lambda soup: soup.find(string=lambda s: s and "précommande" in s.lower())
                         ]
                         add_to_cart = any(check(product_soup) for check in stock_indicators)
                         status = "stock" if add_to_cart else "rupture"
