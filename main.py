@@ -95,11 +95,16 @@ async def scan_sites():
                             continue
 
                         page_text = product_soup.get_text().lower()
-
                         if "pokemon" not in page_text:
                             continue
 
-                        add_to_cart = product_soup.find("button", string=lambda s: s and "ajouter au panier" in s.lower())
+                        stock_indicators = [
+                            lambda soup: soup.find("button", string=lambda s: s and ("ajouter au panier" in s.lower() or "précommande" in s.lower())),
+                            lambda soup: soup.find("form", {"action": lambda s: s and "/cart/add" in s}),
+                            lambda soup: soup.find("button", {"name": "add"}),
+                            lambda soup: soup.select_one("button.add-to-cart, button.product-form__cart-submit")
+                        ]
+                        add_to_cart = any(check(product_soup) for check in stock_indicators)
                         status = "stock" if add_to_cart else "rupture"
 
                     except Exception as e:
