@@ -71,18 +71,12 @@ async def scan_sites():
             try:
                 response = session.get(site["url"], timeout=(5, 10))
                 if response.status_code != 200:
-                    log(f"Erreur HTTP {response.status_code} sur {site['name']}")
                     continue
 
-                try:
-                    soup = BeautifulSoup(response.text, "html.parser")
-                except Exception as e:
-                    log(f"❌ Erreur de parsing HTML pour {site['name']} : {str(e)}")
-                    continue
-
+                soup = BeautifulSoup(response.text, "html.parser")
                 product_links = [
                     a for a in soup.find_all("a", href=True)
-                    if not any(x in a["href"] for x in ["login", "account", "cart", "contact", "javascript:void", "tel:", "#"])
+                    if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()
                 ]
 
                 for link in product_links:
@@ -90,49 +84,48 @@ async def scan_sites():
                     try:
                         product_page = session.get(full_url, timeout=(5, 10))
                         if product_page.status_code == 404:
-                            log(f"⛔ Lien brisé détecté (404) : {full_url}")
-                            continue
-                        try:
-                            product_soup = BeautifulSoup(product_page.text, "html.parser")
-                        except Exception as e:
-                            log(f"Erreur BeautifulSoup sur {full_url} : {str(e)}")
                             continue
 
+                        product_soup = BeautifulSoup(product_page.text, "html.parser")
                         page_text = product_soup.get_text().lower()
-                        if "pokemon" not in page_text and "pokémon" not in page_text:
-                            continue
 
                         keywords_in_stock = ["ajouter au panier", "précommande", "précommander", "en stock", "disponible"]
-                        in_stock_text = any(keyword in page_text for keyword in keywords_in_stock)
+                        out_of_stock_words = ["rupture", "épuisé", "indisponible"]
+
+                        in_stock_text = any(kw in page_text for kw in keywords_in_stock)
+                        out_of_stock = any(word in page_text for word in out_of_stock_words)
 
                         json_scripts = product_soup.find_all("script", type="application/ld+json")
                         in_stock_json = False
                         for script in json_scripts:
-                            if '"availability"' in script.text and "InStock" in script.text:
-                                in_stock_json = True
-                                break
+                            try:
+                                data = json.loads(script.string)
+                                if "InStock" in json.dumps(data):
+                                    in_stock_json = True
+                                    break
+                            except:
+                                continue
 
                         status = "stock" if in_stock_text or in_stock_json else "rupture"
 
-                    except Exception as e:
-                        log(f"Erreur produit ({full_url}) : {str(e)}")
-                        continue
-
-                    if full_url not in known_status:
-                        known_status[full_url] = status
-                        if initialized and status == "stock":
-                            await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
-                    else:
-                        last_status = known_status[full_url]
-                        if last_status != status:
+                        if full_url not in known_status:
                             known_status[full_url] = status
-                            if status == "stock":
-                                await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
+                            if initialized and status == "stock":
+                                await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
+                        else:
+                            last_status = known_status[full_url]
+                            if last_status != status:
+                                known_status[full_url] = status
+                                if status == "stock":
+                                    await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
+
+                    except Exception as e:
+                        continue
 
                 await asyncio.sleep(1)
 
-            except Exception as e:
-                log(f"Erreur sur {site['name']} : {str(e)}")
+            except Exception:
+                continue
 
         if not initialized:
             initialized = True
@@ -167,6 +160,15 @@ async def rescan(ctx):
     await ctx.send("🔁 Scan manuel lancé...")
     await scan_sites()
     await ctx.send("✅ Scan terminé.")
+
+@bot.command()
+async def changes(ctx):
+    tracked = [url for url, status in known_status.items() if status == "stock"]
+    if not tracked:
+        await ctx.send("📭 Aucun produit en stock pour le moment.")
+    else:
+        message = "\n".join(tracked[-10:])
+        await ctx.send(f"📬 **10 produits actuellement en stock :**\n{message}")
 
 @bot.event
 async def on_ready():
