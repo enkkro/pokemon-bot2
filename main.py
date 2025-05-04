@@ -79,7 +79,10 @@ async def scan_sites():
                     log(f"❌ Erreur de parsing HTML pour {site['name']} : {str(e)}")
                     continue
 
-                product_links = [a for a in soup.find_all("a", href=True) if not any(x in a["href"] for x in ["login", "account", "cart", "contact", "javascript:void"])]
+                product_links = [
+                    a for a in soup.find_all("a", href=True)
+                    if not any(x in a["href"] for x in ["login", "account", "cart", "contact", "javascript:void", "tel:", "#"])
+                ]
 
                 for link in product_links:
                     full_url = urljoin(site["url"], link["href"])
@@ -99,7 +102,7 @@ async def scan_sites():
                             continue
 
                         stock_indicators = [
-                            lambda soup: soup.find("button", string=lambda s: s and any(w in s.lower() for w in ["ajouter au panier", "précommande", "preorder", "commander"])),
+                            lambda soup: soup.find("button", string=lambda s: s and ("ajouter au panier" in s.lower() or "précommande" in s.lower())),
                             lambda soup: soup.find("form", {"action": lambda s: s and "/cart/add" in s}),
                             lambda soup: soup.find("button", {"name": "add"}),
                             lambda soup: soup.select_one("button.add-to-cart, button.product-form__cart-submit")
