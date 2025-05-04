@@ -6,6 +6,7 @@ import os
 import asyncio
 from datetime import datetime
 from urllib.parse import urljoin
+import json
 
 TOKEN = os.getenv("TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
@@ -98,17 +99,20 @@ async def scan_sites():
                             continue
 
                         page_text = product_soup.get_text().lower()
-                        if "pokemon" not in page_text:
+                        if "pokemon" not in page_text and "pokémon" not in page_text:
                             continue
 
-                        stock_indicators = [
-                            lambda soup: soup.find("button", string=lambda s: s and ("ajouter au panier" in s.lower() or "précommande" in s.lower())),
-                            lambda soup: soup.find("form", {"action": lambda s: s and "/cart/add" in s}),
-                            lambda soup: soup.find("button", {"name": "add"}),
-                            lambda soup: soup.select_one("button.add-to-cart, button.product-form__cart-submit")
-                        ]
-                        add_to_cart = any(check(product_soup) for check in stock_indicators)
-                        status = "stock" if add_to_cart else "rupture"
+                        keywords_in_stock = ["ajouter au panier", "précommande", "précommander", "en stock", "disponible"]
+                        in_stock_text = any(keyword in page_text for keyword in keywords_in_stock)
+
+                        json_scripts = product_soup.find_all("script", type="application/ld+json")
+                        in_stock_json = False
+                        for script in json_scripts:
+                            if '"availability"' in script.text and "InStock" in script.text:
+                                in_stock_json = True
+                                break
+
+                        status = "stock" if in_stock_text or in_stock_json else "rupture"
 
                     except Exception as e:
                         log(f"Erreur produit ({full_url}) : {str(e)}")
