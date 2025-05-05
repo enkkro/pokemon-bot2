@@ -71,6 +71,7 @@ async def scan_sites():
             try:
                 response = session.get(site["url"], timeout=(5, 10))
                 if response.status_code != 200:
+                    log(f"Erreur HTTP {response.status_code} sur {site['name']}")
                     continue
 
                 soup = BeautifulSoup(response.text, "html.parser")
@@ -85,47 +86,35 @@ async def scan_sites():
                         product_page = session.get(full_url, timeout=(5, 10))
                         if product_page.status_code == 404:
                             continue
-
                         product_soup = BeautifulSoup(product_page.text, "html.parser")
                         page_text = product_soup.get_text().lower()
 
-                        keywords_in_stock = ["ajouter au panier", "précommande", "précommander", "en stock", "disponible"]
-                        out_of_stock_words = ["rupture", "épuisé", "indisponible"]
+                        if "pokemon" not in page_text:
+                            continue
 
-                        in_stock_text = any(kw in page_text for kw in keywords_in_stock)
-                        out_of_stock = any(word in page_text for word in out_of_stock_words)
-
-                        json_scripts = product_soup.find_all("script", type="application/ld+json")
-                        in_stock_json = False
-                        for script in json_scripts:
-                            try:
-                                data = json.loads(script.string)
-                                if "InStock" in json.dumps(data):
-                                    in_stock_json = True
-                                    break
-                            except:
-                                continue
-
-                        status = "stock" if in_stock_text or in_stock_json else "rupture"
-
-                        if full_url not in known_status:
-                            known_status[full_url] = status
-                            if initialized and status == "stock":
-                                await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
-                        else:
-                            last_status = known_status[full_url]
-                            if last_status != status:
-                                known_status[full_url] = status
-                                if status == "stock":
-                                    await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
-
-                    except Exception as e:
+                        keywords_in_stock = [
+                            "ajouter au panier", "précommande", "précommander",
+                            "en stock", "disponible", "add to cart", "preorder"
+                        ]
+                        status = "stock" if any(word in page_text for word in keywords_in_stock) else "rupture"
+                    except:
                         continue
+
+                    if full_url not in known_status:
+                        known_status[full_url] = status
+                        if initialized and status == "stock":
+                            await channel.send(f"🆕 **{site['name']}** : nouveau produit Pokémon détecté !\n{full_url}")
+                    else:
+                        last_status = known_status[full_url]
+                        if last_status != status:
+                            known_status[full_url] = status
+                            if status == "stock":
+                                await channel.send(f"🔁 **{site['name']}** : RESTOCK détecté !\n{full_url}")
 
                 await asyncio.sleep(1)
 
-            except Exception:
-                continue
+            except Exception as e:
+                log(f"Erreur sur {site['name']} : {str(e)}")
 
         if not initialized:
             initialized = True
@@ -141,41 +130,15 @@ async def reset(ctx):
     await ctx.send("🔄 Mémoire du bot réinitialisée. Tous les produits seront re-scannés.")
 
 @bot.command()
-async def derniers(ctx):
-    if not known_status:
-        await ctx.send("Aucun produit suivi pour l'instant.")
-        return
-    derniers = list(known_status.items())[-10:]
-    message = "\n".join(f"- {url} → {status}" for url, status in derniers)
-    await ctx.send(f"📝 **10 derniers produits suivis :**\n{message}")
-
-@bot.command()
 async def status(ctx):
     uptime = datetime.now() - start_time
     minutes, seconds = divmod(uptime.seconds, 60)
     await ctx.send(f"⏱️ Le bot tourne depuis {uptime.days}j {minutes}min {seconds}s.\n📦 Produits suivis actuellement : {len(known_status)}")
 
-@bot.command()
-async def rescan(ctx):
-    await ctx.send("🔁 Scan manuel lancé...")
-    await scan_sites()
-    await ctx.send("✅ Scan terminé.")
-
-@bot.command()
-async def changes(ctx):
-    tracked = [url for url, status in known_status.items() if status == "stock"]
-    if not tracked:
-        await ctx.send("📭 Aucun produit en stock pour le moment.")
-    else:
-        message = "\n".join(tracked[-10:])
-        await ctx.send(f"📬 **10 produits actuellement en stock :**\n{message}")
-
 @bot.event
 async def on_ready():
     log(f"Bot connecté en tant que {bot.user}")
-    try:
+    if not check_sites.is_running():
         check_sites.start()
-    except Exception as e:
-        log(f"❌ Erreur lors du démarrage de la boucle check_sites : {str(e)}")
 
 bot.run(TOKEN)
