@@ -77,14 +77,15 @@ async def scan_sites():
                 soup = BeautifulSoup(response.text, "html.parser")
                 product_links = [
                     a for a in soup.find_all("a", href=True)
-                    if "pokemon" in a.get_text().lower() or "pokemon" in a["href"].lower()
+                    if "/products/" in a["href"]
+                    and not any(x in a["href"] for x in ["/policies", "cdn", "javascript", "mailto", "#"])
                 ]
 
                 for link in product_links:
                     full_url = urljoin(site["url"], link["href"])
                     try:
                         product_page = session.get(full_url, timeout=(5, 10))
-                        if product_page.status_code == 404:
+                        if product_page.status_code in [404, 410]:
                             continue
                         product_soup = BeautifulSoup(product_page.text, "html.parser")
                         page_text = product_soup.get_text().lower()
@@ -97,7 +98,9 @@ async def scan_sites():
                             "en stock", "disponible", "add to cart", "preorder"
                         ]
                         status = "stock" if any(word in page_text for word in keywords_in_stock) else "rupture"
-                    except:
+
+                    except Exception as e:
+                        log(f"Erreur produit {full_url} : {str(e)}")
                         continue
 
                     if full_url not in known_status:
